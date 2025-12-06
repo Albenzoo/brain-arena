@@ -1,0 +1,22 @@
+meta {
+  name: check
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/questions/check
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "questionId": 17,
+    "selectedAnswer": "Charles Babbage"
+  }
+}
+
+settings {
+  encodeUrl: true
+}

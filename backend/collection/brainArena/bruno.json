@@ -1,0 +1,9 @@
+{
+  "version": "1",
+  "name": "BrainArena",
+  "type": "collection",
+  "ignore": [
+    "node_modules",
+    ".git"
+  ]
+}
