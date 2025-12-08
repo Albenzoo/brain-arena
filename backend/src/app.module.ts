@@ -10,7 +10,7 @@ import { QuestionsModule } from './questions/questions.module';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: '.env',
+      envFilePath: `.env.${process.env.NODE_ENV || 'development'}`,
     }),
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
@@ -25,8 +25,8 @@ import { QuestionsModule } from './questions/questions.module';
         autoLoadEntities: true,
         synchronize: config.get('NODE_ENV') === 'development',
         logging: config.get('NODE_ENV') === 'development',
-        ssl: config.get('NODE_ENV') === 'production' 
-          ? { rejectUnauthorized: false } 
+        ssl: config.get('NODE_ENV') === 'production'
+          ? { rejectUnauthorized: false }
           : false,
       }),
     }),
