@@ -59,7 +59,7 @@ export class MainScene {
 
     private setupLighting(): void {
         const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 3);
-        light.position.set(0.5, 1, 0.25);
+        light.position.set(0.5, 1.5, 0.25);
         this.scene.add(light);
     }
 
