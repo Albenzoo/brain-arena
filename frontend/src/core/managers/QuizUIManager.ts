@@ -31,8 +31,8 @@ export class QuizUIManager {
         const questionBottomY = this.questionPanel.position.y - questionSize.height / 2;
         const baseZ = this.questionPanel.position.z;
 
-        // Configurazione Layout
-        // Usa 1 colonna se ci sono ≤2 opzioni, altrimenti 2 colonne
+        // Layout configuration    
+        // Use 1 column if there are ≤2 options, otherwise 2 columns
         const columns = options.length <= 2 ? 1 : Math.min(2, options.length);
         const verticalMargin = 0.12;
         const rowGap = 0.1;
@@ -41,7 +41,7 @@ export class QuizUIManager {
             const panel = new AnswerOption3D(option);
             const panelSize = this.getMeshSize(panel);
 
-            // Calcolo posizione griglia
+            // Calculate grid position
             const row = Math.floor(index / columns);
             const column = index % columns;
 
