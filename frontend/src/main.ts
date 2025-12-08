@@ -36,12 +36,10 @@ startButton?.addEventListener('click', async () => {
 
     // Request AR session senza dom-overlay
     const session = await navigator.xr.requestSession('immersive-ar', {
-      optionalFeatures: ['hit-test']
+      optionalFeatures: ['hit-test', 'local']
     });
 
     if (session) {
-      // Set reference space and start session
-      mainScene.renderer.xr.setReferenceSpaceType('viewer');
 
       await mainScene.renderer.xr.setSession(session);
 
