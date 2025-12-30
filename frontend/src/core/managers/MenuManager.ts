@@ -1,8 +1,9 @@
 import * as THREE from 'three';
 import { Button3D } from '../../components/shared/Button3D';
 import { LogoPanel3D } from '../../components/menu/LogoPanel3D';
+import { LocalizationService } from '../../services/LocalizationService';
 
-export type MenuAction = 'start_game' | 'exit_ar';
+export type MenuAction = 'start_game' | 'exit_ar' | 'toggle_language';
 
 export class MenuManager {
     private scene: THREE.Scene;
@@ -10,7 +11,8 @@ export class MenuManager {
     private logo: LogoPanel3D | null = null;
     private buttons: Button3D[] = [];
     private isVisible: boolean = false;
-    private interactionBlocked: boolean = false
+    private interactionBlocked: boolean = false;
+    private readonly localization = LocalizationService.getInstance();
 
     private onActionCallback: ((action: MenuAction) => void) | null = null;
 
@@ -19,6 +21,13 @@ export class MenuManager {
         this.menuGroup = new THREE.Group();
         this.menuGroup.visible = false;
         this.scene.add(this.menuGroup);
+
+        // Listen for language changes to update menu
+        this.localization.onLanguageChange(() => {
+            if (this.isVisible) {
+                this.recreateMenu();
+            }
+        });
     }
 
     public show(): void {
@@ -28,7 +37,6 @@ export class MenuManager {
         this.menuGroup.visible = true;
         this.isVisible = true;
 
-        // Block interactions to avoid accidental clicks
         this.interactionBlocked = true;
         setTimeout(() => {
             this.interactionBlocked = false;
@@ -59,7 +67,6 @@ export class MenuManager {
         const button = obj;
         const actionId = button.getActionId() as MenuAction;
 
-        // Visual feedback
         button.setState('pressed');
         button.scale.set(0.95, 0.95, 1);
 
@@ -79,21 +86,27 @@ export class MenuManager {
         return this.isVisible;
     }
 
+    private recreateMenu(): void {
+        this.clearMenu();
+        this.createMenu();
+    }
+
     private createMenu(): void {
-        // Menu base position (in front of camera)
+        const translations = this.localization.getTranslations();
         const menuZ = -2.5;
         const menuY = 1.6;
 
-        // Logo at the top
+        // Logo
         this.logo = new LogoPanel3D();
         this.logo.position.set(0, menuY + 0.3, menuZ);
         this.logo.setLogoImage('/assets/logo-brainarena.png');
         this.menuGroup.add(this.logo);
 
-        // Buttons below the logo
+        // Buttons with localized labels
         const buttonConfigs: Array<{ label: string; actionId: MenuAction }> = [
-            { label: 'Start Game', actionId: 'start_game' },
-            { label: 'Exit AR', actionId: 'exit_ar' }
+            { label: translations.menu.startGame, actionId: 'start_game' },
+            { label: translations.menu.language, actionId: 'toggle_language' },
+            { label: translations.menu.exitAR, actionId: 'exit_ar' }
         ];
 
         const buttonSpacing = 0.38;

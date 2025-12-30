@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { QuizService } from '../../services/QuizService';
 import { GameStateService } from '../../services/GameStateService';
+import { LocalizationService } from '../../services/LocalizationService';
 import { LoadingSpinner3D } from '../../components/shared/LoadingSpinner3D';
 import { AnswerOption3D } from '../../components/AnswerOption3D';
 import type { Question } from '../../models/Question';
@@ -8,7 +9,6 @@ import { QuizUIManager } from '../managers/QuizUIManager';
 import { InteractionManager } from '../managers/InteractionManager';
 import { MenuManager, type MenuAction } from '../managers/MenuManager';
 import { Button3D } from '../../components/shared/Button3D';
-
 
 export class MainScene {
     public scene: THREE.Scene;
@@ -23,11 +23,11 @@ export class MainScene {
     // Services & State
     private readonly quizService = new QuizService();
     private readonly gameStateService = new GameStateService();
+    private readonly localization = LocalizationService.getInstance();
     private readonly loadingSpinner = new LoadingSpinner3D();
 
     private currentQuestion: Question | null = null;
     private isProcessingAnswer: boolean = false;
-
 
     constructor(container: Element, animate: () => void) {
         this.renderer = this.setupRenderer(container, animate);
@@ -46,7 +46,7 @@ export class MainScene {
         this.interactionManager.onObjectSelected(this.handleObjectSelection.bind(this));
         this.menuManager.onAction(this.handleMenuAction.bind(this));
 
-        // Listen for AR session start event
+        // Listen for AR session start
         this.renderer.xr.addEventListener('sessionstart', () => {
             this.showMainMenu();
         });
@@ -63,7 +63,6 @@ export class MainScene {
         light.position.set(0, 3, 0);
         this.scene.add(light);
 
-        // directional light for better shading
         const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
         directionalLight.position.set(2, 3, 2);
         this.scene.add(directionalLight);
@@ -81,11 +80,16 @@ export class MainScene {
                 this.menuManager.hide();
                 void this.startNewGame();
                 break;
+            case 'toggle_language':
+                this.localization.toggleLanguage();
+                // Menu will auto-update via listener in MenuManager
+                break;
             case 'exit_ar':
                 this.exitAR();
                 break;
         }
     }
+
     private exitAR(): void {
         const session = this.renderer.xr.getSession();
         if (session) {
@@ -93,6 +97,7 @@ export class MainScene {
         }
         this.menuManager.hide();
     }
+
     private async startNewGame(): Promise<void> {
         this.gameStateService.startNewGame();
         this.isProcessingAnswer = false;
@@ -100,9 +105,10 @@ export class MainScene {
     }
 
     private async loadNextQuestion(): Promise<void> {
+        const translations = this.localization.getTranslations();
         this.loadingSpinner.show(new THREE.Vector3(0, 1.5, -2));
-        this.uiManager.clearOptions(); // Clear immediately to avoid clicks during loading
-        this.interactionManager.setInteractiveObjects([]); // Disable interactions
+        this.uiManager.clearOptions();
+        this.interactionManager.setInteractiveObjects([]);
 
         try {
             const question = await this.quizService.getRandomQuestion();
@@ -112,21 +118,18 @@ export class MainScene {
             this.uiManager.showQuestion(`${progressText}\n\n${question.text}`);
             this.uiManager.showOptions(question.options ?? []);
 
-            // Update interactive objects for Raycaster
             this.interactionManager.setInteractiveObjects(this.uiManager.getInteractiveObjects());
-
             this.isProcessingAnswer = false;
 
         } catch (error) {
             console.error('Loading error:', error);
-            this.uiManager.showQuestion("Connection error.");
+            this.uiManager.showQuestion(translations.errors.connectionError);
         } finally {
             this.loadingSpinner.hide();
         }
     }
 
     private handleObjectSelection(obj: THREE.Object3D): void {
-        // Menu handling
         if (this.menuManager.isMenuVisible()) {
             if (obj instanceof Button3D) {
                 this.menuManager.handleSelection(obj);
@@ -134,17 +137,16 @@ export class MainScene {
             return;
         }
 
-        // Verify it's an answer panel
         if (!(obj instanceof AnswerOption3D)) return;
 
         const panel = obj;
+        const translations = this.localization.getTranslations();
 
-        // Restart / Return to Menu handling
         if (!this.gameStateService.isPlaying()) {
             const label = panel.getLabel();
-            if (label === "Restart" || label === "New Game") {
+            if (label === translations.game.restart || label === translations.game.newGame) {
                 void this.startNewGame();
-            } else if (label === "Main Menu") {
+            } else if (label === translations.game.mainMenu) {
                 this.showMainMenu();
             }
             return;
@@ -153,7 +155,6 @@ export class MainScene {
         if (this.isProcessingAnswer) return;
 
         this.isProcessingAnswer = true;
-
         this.uiManager.resetFeedback();
         this.uiManager.setFeedback(panel, 'selected');
         panel.scale.set(1.05, 1.05, 1);
@@ -201,17 +202,19 @@ export class MainScene {
     }
 
     private handleGameOver(): void {
-        this.uiManager.showQuestion("GAME OVER\n\nYou answered incorrectly.\nWould you like to try again?");
-        this.uiManager.showOptions(["Restart", "Main Menu"]);
+        const translations = this.localization.getTranslations();
+        this.uiManager.showQuestion(`${translations.game.gameOver}\n\n${translations.game.gameOverMessage}`);
+        this.uiManager.showOptions([translations.game.restart, translations.game.mainMenu]);
         this.interactionManager.setInteractiveObjects(this.uiManager.getInteractiveObjects());
     }
 
     private handleVictory(): void {
+        const translations = this.localization.getTranslations();
         const victorySound = new Audio('/assets/sounds/victory.wav');
         victorySound.currentTime = 0;
         victorySound.play();
-        this.uiManager.showQuestion("CONGRATULATIONS!\n\nYou completed all the questions!");
-        this.uiManager.showOptions(["New Game", "Main Menu"]);
+        this.uiManager.showQuestion(`${translations.game.victory}\n\n${translations.game.victoryMessage}`);
+        this.uiManager.showOptions([translations.game.newGame, translations.game.mainMenu]);
         this.interactionManager.setInteractiveObjects(this.uiManager.getInteractiveObjects());
     }
 
@@ -224,6 +227,7 @@ export class MainScene {
         container.appendChild(renderer.domElement);
         return renderer;
     }
+
     private onWindowResize(): void {
         this.camera.aspect = window.innerWidth / window.innerHeight;
         this.camera.updateProjectionMatrix();
