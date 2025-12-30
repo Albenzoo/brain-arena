@@ -22,6 +22,7 @@ export class QuestionPanel3D extends THREE.Mesh {
     };
 
     private canvas: HTMLCanvasElement;
+    private texture: THREE.CanvasTexture;
 
     constructor(question: string) {
         const canvas = document.createElement('canvas');
@@ -30,6 +31,8 @@ export class QuestionPanel3D extends THREE.Mesh {
 
         const { contentWidth, contentHeight } = QuestionPanel3D.drawQuestion(canvas, question);
         const texture = new THREE.CanvasTexture(canvas);
+        texture.needsUpdate = true;
+
         const geometry = new THREE.PlaneGeometry(
             toWorldWidth(contentWidth, QuestionPanel3D.PANEL_CONFIG),
             toWorldHeight(contentHeight, QuestionPanel3D.PANEL_CONFIG)
@@ -39,12 +42,32 @@ export class QuestionPanel3D extends THREE.Mesh {
         super(geometry, material);
 
         this.canvas = canvas;
+        this.texture = texture;
         this.position.set(0, 1.3, -2);
     }
 
     public setQuestion(question: string) {
+        const oldWidth = this.canvas.width;
+        const oldHeight = this.canvas.height;
+
         const { contentWidth, contentHeight } = QuestionPanel3D.drawQuestion(this.canvas, question);
-        (this.material as THREE.MeshBasicMaterial).map!.needsUpdate = true;
+
+        // Check if canvas dimensions changed
+        const dimensionsChanged = (oldWidth !== this.canvas.width || oldHeight !== this.canvas.height);
+
+        if (dimensionsChanged) {
+            // Dispose old texture and create new one
+            this.texture.dispose();
+            this.texture = new THREE.CanvasTexture(this.canvas);
+            this.texture.needsUpdate = true;
+
+            const material = this.material as THREE.MeshBasicMaterial;
+            material.map = this.texture;
+            material.needsUpdate = true;
+        } else {
+            // Just update existing texture
+            this.texture.needsUpdate = true;
+        }
 
         const newWidth = toWorldWidth(contentWidth, QuestionPanel3D.PANEL_CONFIG);
         const newHeight = toWorldHeight(contentHeight, QuestionPanel3D.PANEL_CONFIG);
@@ -186,11 +209,8 @@ export class QuestionPanel3D extends THREE.Mesh {
 
     public dispose(): void {
         this.geometry.dispose();
-
+        this.texture.dispose();
         const material = this.material as THREE.MeshBasicMaterial;
-        if (material.map) {
-            material.map.dispose();
-        }
         material.dispose();
     }
 }

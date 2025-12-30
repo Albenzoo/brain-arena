@@ -31,6 +31,7 @@ export class Button3D extends THREE.Mesh {
 
     private label: string;
     private actionId: string;
+    private texture: THREE.CanvasTexture;
 
     constructor(label: string, actionId: string) {
         const canvas = document.createElement('canvas');
@@ -39,6 +40,8 @@ export class Button3D extends THREE.Mesh {
 
         const { contentWidth, contentHeight } = Button3D.drawButton(canvas, label);
         const texture = new THREE.CanvasTexture(canvas);
+        texture.needsUpdate = true;
+
         const geometry = new THREE.PlaneGeometry(
             toWorldWidth(contentWidth, Button3D.PANEL_CONFIG),
             toWorldHeight(contentHeight, Button3D.PANEL_CONFIG)
@@ -49,6 +52,7 @@ export class Button3D extends THREE.Mesh {
 
         this.label = label;
         this.actionId = actionId;
+        this.texture = texture;
     }
 
     public getActionId(): string {
@@ -148,8 +152,8 @@ export class Button3D extends THREE.Mesh {
 
     public dispose(): void {
         this.geometry.dispose();
+        this.texture.dispose();
         const material = this.material as THREE.MeshBasicMaterial;
-        material.map?.dispose();
         material.dispose();
     }
 }

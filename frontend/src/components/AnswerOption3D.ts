@@ -24,6 +24,7 @@ export class AnswerOption3D extends THREE.Mesh {
     };
 
     private canvas: HTMLCanvasElement;
+    private texture: THREE.CanvasTexture;
     private label: string;
     private currentState: AnswerFeedbackState = 'idle';
 
@@ -34,6 +35,8 @@ export class AnswerOption3D extends THREE.Mesh {
 
         const { contentWidth, contentHeight } = AnswerOption3D.drawAnswer(canvas, answer, 'idle');
         const texture = new THREE.CanvasTexture(canvas);
+        texture.needsUpdate = true;
+
         const geometry = new THREE.PlaneGeometry(
             toWorldWidth(contentWidth, AnswerOption3D.PANEL_CONFIG),
             toWorldHeight(contentHeight, AnswerOption3D.PANEL_CONFIG)
@@ -43,6 +46,7 @@ export class AnswerOption3D extends THREE.Mesh {
         super(geometry, material);
 
         this.canvas = canvas;
+        this.texture = texture;
         this.label = answer;
     }
 
@@ -50,15 +54,53 @@ export class AnswerOption3D extends THREE.Mesh {
         if (this.currentState === state) return;
         this.currentState = state;
 
+        const oldWidth = this.canvas.width;
+        const oldHeight = this.canvas.height;
+
         // Redraw with the new state
         AnswerOption3D.drawAnswer(this.canvas, this.label, state);
-        (this.material as THREE.MeshBasicMaterial).map!.needsUpdate = true;
+
+        // Check if canvas dimensions changed
+        const dimensionsChanged = (oldWidth !== this.canvas.width || oldHeight !== this.canvas.height);
+
+        if (dimensionsChanged) {
+            // Dispose old texture and create new one
+            this.texture.dispose();
+            this.texture = new THREE.CanvasTexture(this.canvas);
+            this.texture.needsUpdate = true;
+
+            const material = this.material as THREE.MeshBasicMaterial;
+            material.map = this.texture;
+            material.needsUpdate = true;
+        } else {
+            // Just update existing texture
+            this.texture.needsUpdate = true;
+        }
     }
 
     public setAnswer(answer: string) {
+        const oldWidth = this.canvas.width;
+        const oldHeight = this.canvas.height;
+
         const { contentWidth, contentHeight } = AnswerOption3D.drawAnswer(this.canvas, answer, this.currentState);
         this.label = answer;
-        (this.material as THREE.MeshBasicMaterial).map!.needsUpdate = true;
+
+        // Check if canvas dimensions changed
+        const dimensionsChanged = (oldWidth !== this.canvas.width || oldHeight !== this.canvas.height);
+
+        if (dimensionsChanged) {
+            // Dispose old texture and create new one
+            this.texture.dispose();
+            this.texture = new THREE.CanvasTexture(this.canvas);
+            this.texture.needsUpdate = true;
+
+            const material = this.material as THREE.MeshBasicMaterial;
+            material.map = this.texture;
+            material.needsUpdate = true;
+        } else {
+            // Just update existing texture
+            this.texture.needsUpdate = true;
+        }
 
         const newWidth = toWorldWidth(contentWidth, AnswerOption3D.PANEL_CONFIG);
         const newHeight = toWorldHeight(contentHeight, AnswerOption3D.PANEL_CONFIG);
@@ -186,8 +228,8 @@ export class AnswerOption3D extends THREE.Mesh {
 
     public dispose(): void {
         this.geometry.dispose();
+        this.texture.dispose();
         const material = this.material as THREE.MeshBasicMaterial;
-        material.map?.dispose();
         material.dispose();
     }
 }
