@@ -99,7 +99,7 @@ export class MenuManager {
         // Logo
         this.logo = new LogoPanel3D();
         this.logo.position.set(0, menuY + 0.3, menuZ);
-        this.logo.setLogoImage('/assets/logo-brainarena.png');
+        this.logo.setLogoImage('/assets/image/logo-brainarena.png');
         this.menuGroup.add(this.logo);
 
         // Buttons with localized labels
